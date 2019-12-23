@@ -8,3 +8,10 @@ MarkupSafe
 SQLAlchemy
 WTForms
 Werkzeug
+Flask-Admin
+Flask-CKEditor
+Flask-Migrate
+Flask-RESTful
+Flask-Script
+Mako
+Pillow
