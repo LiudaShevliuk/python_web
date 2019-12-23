@@ -13,6 +13,8 @@ from datetime import datetime
 #from flask_admin.actions import ActionsMixin
 #from wtforms import PasswordField
 from functools import wraps
+from flask import jsonify, request
+from flask_restful import Resource
 
 def make_sure_path_exists(path):
     try:
@@ -281,7 +283,7 @@ def user_update_admin(id):
 			flash(form.errors, 'danger')
 			return render_template('user-update-admin.html', form=form, user=user)
 
-@app.route('/admin/dalete-user/<id>')
+@app.route('/admin/delete-user/<id>')
 @login_required
 @admin_login_required
 def user_delete_admin(id):
@@ -291,31 +293,82 @@ def user_delete_admin(id):
 	flash('User Deleted.')
 	return redirect(url_for('users_list_admin'))
 
-'''class HelloView(BaseView):
-    @expose('/')
-    def index(self):
-        return self.render('some-template.html')'''
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    users = User.query.all()
+    output = []
+    for user in users:
+        user_data = {}
+        user_data['id'] = user.id
+        user_data['username'] = user.username
+        user_data['password'] = user.password
+        user_data['admin'] = user.admin
+        output.append(user_data)
+    return jsonify({'users': output})
 
-'''class UserAdminView(ModelView, ActionsMixin):
-    column_searchable_list = ('username',)
-    column_sortable_list = ('username', 'admin')
-    column_exclude_list = ('password',)
-    form_excluded_columns = ('password',)
-    form_edit_rules = ('username', 'admin',)
-  
-    def is_accessible(self):
-        return current_user.is_authenticated() and current_user.is_admin()
+@app.route('/users/<id>', methods=['GET'])
+def get_one_user(id):
+    user = User.query.filter_by(id=id).first()
+    if not user:
+        return jsonify({'message': 'No user found!'})
+    user_data = {}
+    user_data['id'] = user.id
+    user_data['username'] = user.username
+    user_data['password'] = user.password
+    user_data['admin'] = user.admin
 
-    def scaffold_form(self):
-        form_class = super(UserAdminView, self).scaffold_form()
-        form_class.password = PasswordField('Password')
-        return form_class
+    return jsonify({'user': user_data})
 
-    def create_model(self, form):
-        model = self.model(
-            form.username.data, form.password.data, form.admin.data
-        )
-        form.populate_obj(model)
-        self.session.add(model)
-        self._on_model_change(form, model, True)
-        self.session.commit()'''
+@app.route('/users', methods=['POST'])
+def create_user():
+    data = request.get_json()
+
+    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+
+    new_user = User(username=data['username'], email=data['email'], password=hashed_password, admin=False)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'New user created!'})
+
+@app.route('/users/<id>', methods=['PUT'])
+def promote_user(id):
+    user = User.query.filter_by(id=id).first()
+    if not user:
+        return jsonify({'message': 'No user found!'})
+    user.admin = True
+    db.session.commit()
+    return jsonify({'message': 'The user has been promoted!'})
+
+@app.route('/users/<id>',methods=['DELETE'])
+def delete_user(id):
+    user = User.query.filter_by(id=id).first()
+    if not user:
+        return jsonify({'message': 'No user found!'})
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'The user has been deleted!'})
+
+'''@app.route('/api', methods=['GET', 'POST'])
+def index():
+	if (request.method == 'POST'):
+		some_json = request.get_json()
+		return jsonify({'you sent': some_json}), 201
+	else:
+		return jsonify({"about": "Hello World!\n"})
+
+@app.route('/multi/<int:num>', methods=['GET'])
+def get_multiply10(num):
+	return jsonify({'result': num*10})'''
+
+class HelloWorld(Resource):
+	def get(self):
+		return {"about": "Hello!\n"}
+
+	def post(self):
+		some_json = request.get_json()
+		return {'you sent': some_json}, 201
+
+class Multi(Resource):
+	def get(self, num):
+		return {'result': num*10}
+

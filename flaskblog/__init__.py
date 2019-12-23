@@ -5,6 +5,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from flask_admin import Admin
+from flask_restful import Api
 import os
 
 app = Flask(__name__)
@@ -20,6 +21,11 @@ login_manager.login_message_category = 'info'
 migrate = Migrate(app, db)
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
+api = Api(app)
+
+import flaskblog.routes as r
+api.add_resource(r.HelloWorld, '/api')
+api.add_resource(r.Multi, '/multi/<int:num>')
 
 import flaskblog.forms as views
 admin = Admin(app)
